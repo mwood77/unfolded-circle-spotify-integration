@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: uc-intg-spotify
+    container_name: unfolded-circle-spotify-integration
     restart: unless-stopped
     network_mode: host  # Required for device discovery
     volumes:

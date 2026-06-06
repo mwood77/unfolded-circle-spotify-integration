@@ -75,7 +75,7 @@ Browse and play your Spotify library directly from the Remote's media browser:
 
 ### 1. Remote Web Interface (Recommended)
 1. Navigate to the [**Releases**](https://github.com/mwood77/unfolded-circle-spotify-integration/releases) page
-2. Download the latest `uc-intg-spotify-<version>-aarch64.tar.gz` file
+2. Download the latest `unfolded-circle-spotify-integration-<version>-aarch64.tar.gz` file
 3. Open your remote's web interface (`http://your-remote-ip`)
 4. Go to **Settings** → **Integrations** → **Add Integration**
 5. Click **Upload** and select the downloaded `.tar.gz` file
@@ -87,7 +87,7 @@ Browse and play your Spotify library directly from the Remote's media browser:
 **Docker Compose:**
 ```yaml
 services:
-  uc-intg-spotify:
+  unfolded-circle-spotify-integration:
     image: ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
     container_name: unfolded-circle-spotify-integration
     network_mode: host
@@ -102,7 +102,7 @@ services:
 
 **Docker Run:**
 ```bash
-docker run -d --name=uc-intg-spotify --network host -v </local/path>:/data -e UC_CONFIG_HOME=/data -e UC_INTEGRATION_HTTP_PORT=9090 -e PYTHONPATH=/app --restart unless-stopped ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
+docker run -d --name=unfolded-circle-spotify-integration --network host -v </local/path>:/data -e UC_CONFIG_HOME=/data -e UC_INTEGRATION_HTTP_PORT=9090 -e PYTHONPATH=/app --restart unless-stopped ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
 ```
 
 ## Configuration
