@@ -1,6 +1,8 @@
 """Spotify polling device. :copyright: (c) 2024 by Meir Miyara. :license: MPL-2.0"""
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import re
 import time
@@ -17,6 +19,7 @@ _LOG = logging.getLogger(__name__)
 _HEX_HASH_RE = re.compile(r"^[0-9a-f]{32,}$", re.IGNORECASE)
 
 DEVICE_CACHE_TTL = 86400  # 24 hours
+PLAYBACK_REFRESH_DELAY = 0.5
 
 _DEVICE_TYPE_LABELS = {
     "Computer": "Computer",
@@ -66,7 +69,10 @@ class SpotifyDevice(PollingDevice):
         self._duration: int = 0
         self._position: int = 0
         self._volume: int = 0
+        self._muted: bool = False
+        self._last_nonzero_volume: int = 50
         self._shuffle: bool = False
+        self._smart_shuffle: bool = False
         self._repeat: str = "off"
         self._media_uri: str = ""
         self._context_uri: str = ""
@@ -80,6 +86,7 @@ class SpotifyDevice(PollingDevice):
 
         self._device_cache: dict[str, dict[str, Any]] = {}
         self._discovery = SpotifyDiscovery(on_update=self._on_zeroconf_update)
+        self._playback_refresh_task: asyncio.Task[None] | None = None
 
     @property
     def identifier(self) -> str:
@@ -119,6 +126,52 @@ class SpotifyDevice(PollingDevice):
             return self._devices[0].get("id")
         return None
 
+    def set_playing_state(self, is_playing: bool) -> None:
+        """Optimistically update playback state after Spotify accepts a command."""
+        self._is_playing = is_playing
+        if is_playing:
+            self._state = "PLAYING"
+        else:
+            self._state = "PAUSED" if self._title else "ON"
+        self.push_update()
+
+    def set_volume_state(self, volume: int) -> None:
+        """Optimistically update volume and inferred mute state."""
+        self._volume = max(0, min(100, volume))
+        self._muted = self._volume == 0
+        if self._volume > 0:
+            self._last_nonzero_volume = self._volume
+        self.push_update()
+
+    def get_unmute_volume(self) -> int:
+        return max(1, min(100, self._last_nonzero_volume or 50))
+
+    def set_shuffle_state(self, shuffle: bool) -> None:
+        """Optimistically update shuffle state after Spotify accepts a command."""
+        self._shuffle = shuffle
+        self._smart_shuffle = False if not shuffle else self._smart_shuffle
+        self.push_update()
+
+    def set_repeat_state(self, repeat: str) -> None:
+        """Optimistically update repeat state after Spotify accepts a command."""
+        self._repeat = repeat if repeat in ("off", "context", "track") else "off"
+        self.push_update()
+
+    def schedule_playback_refresh(self) -> None:
+        """Debounce playback refreshes after Spotify playback commands."""
+        if self._playback_refresh_task:
+            self._playback_refresh_task.cancel()
+        self._playback_refresh_task = asyncio.create_task(self._refresh_playback_after_delay())
+
+    async def _refresh_playback_after_delay(self) -> None:
+        try:
+            await asyncio.sleep(PLAYBACK_REFRESH_DELAY)
+            await self.poll_device()
+        except asyncio.CancelledError:
+            raise
+        except Exception as err:
+            _LOG.debug("[%s] Playback refresh failed: %s", self.log_id, err)
+
     async def establish_connection(self) -> None:
         cfg = self._device_config
         self._client = SpotifyClient(cfg.access_token, cfg.refresh_token)
@@ -152,7 +205,11 @@ class SpotifyDevice(PollingDevice):
                 self._duration = playback.get("duration_ms", 0) // 1000
                 self._position = playback.get("progress_ms", 0) // 1000
                 self._volume = playback.get("volume_percent", 0)
-                self._shuffle = playback.get("shuffle_state", False)
+                self._muted = self._volume == 0
+                if self._volume > 0:
+                    self._last_nonzero_volume = self._volume
+                self._smart_shuffle = playback.get("smart_shuffle", False)
+                self._shuffle = playback.get("shuffle_state", False) or self._smart_shuffle
                 self._repeat = playback.get("repeat_state", "off")
                 self._media_uri = playback.get("uri", "")
                 self._media_type = playback.get("currently_playing_type", "track")
@@ -184,7 +241,11 @@ class SpotifyDevice(PollingDevice):
                 self._position = 0
                 self._media_uri = ""
                 self._volume = playback.get("volume_percent", 0)
-                self._shuffle = playback.get("shuffle_state", False)
+                self._muted = self._volume == 0
+                if self._volume > 0:
+                    self._last_nonzero_volume = self._volume
+                self._smart_shuffle = playback.get("smart_shuffle", False)
+                self._shuffle = playback.get("shuffle_state", False) or self._smart_shuffle
                 self._repeat = playback.get("repeat_state", "off")
                 self._disallows = playback.get("disallows", {})
             else:
@@ -197,6 +258,9 @@ class SpotifyDevice(PollingDevice):
                 self._duration = 0
                 self._position = 0
                 self._media_uri = ""
+                self._muted = self._volume == 0
+                self._smart_shuffle = False
+                self._shuffle = False
                 self._disallows = {}
 
             self._devices = devices
@@ -214,6 +278,11 @@ class SpotifyDevice(PollingDevice):
                 self.events.emit(DeviceEvents.DISCONNECTED, self.identifier)
 
     async def disconnect(self) -> None:
+        if self._playback_refresh_task:
+            self._playback_refresh_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._playback_refresh_task
+            self._playback_refresh_task = None
         self._discovery.stop()
         if self._client:
             await self._client.close()
