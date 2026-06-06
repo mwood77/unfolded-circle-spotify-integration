@@ -126,11 +126,15 @@ docker run -d --name=uc-intg-spotify --network host -v </local/path>:/data -e UC
 ### Step 3: Completion
 
 Five entities are created automatically:
-- **Spotify Player** — Media Player with browse, search, and playback control
-- **Spotify Remote** — Remote entity with button mappings and custom UI
-- **Spotify Active Device** — Select entity for device switching
-- **Spotify Now Playing** — Sensor showing current track
-- **Spotify Active Device** — Sensor showing active playback device
+- **Spotify (<account>) Player** — Media Player with browse, search, and playback control
+- **Spotify (<account>) Remote** — Remote entity with button mappings and custom UI
+- **Spotify (<account>) Active Device** — Select entity for device switching
+- **Spotify (<account>) Now Playing** — Sensor showing current track
+- **Spotify (<account>) Active Device** — Sensor showing active playback device
+
+### Multiple Spotify Accounts
+
+To add another Spotify account, run the integration setup again and authenticate in Spotify as the other user. Each account is stored as its own configured device with separate OAuth tokens and account-specific entities. This is a workaround so you can have multiple Spotify accounts controllable from your remote.
 
 ## Contributing
 

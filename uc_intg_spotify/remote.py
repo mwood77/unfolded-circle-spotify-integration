@@ -40,7 +40,7 @@ class SpotifyRemote(RemoteEntity):
         entity_id = f"remote.{device_config.identifier}.remote"
         super().__init__(
             entity_id,
-            "Spotify Remote",
+            f"{device_config.name} Remote",
             features=[remote.Features.SEND_CMD],
             attributes={remote.Attributes.STATE: remote.States.UNAVAILABLE},
             simple_commands=SIMPLE_COMMANDS,

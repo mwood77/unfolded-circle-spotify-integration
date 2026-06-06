@@ -70,7 +70,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         entity_id = f"media_player.{device_config.identifier}.player"
         super().__init__(
             entity_id,
-            "Spotify Player",
+            f"{device_config.name} Player",
             features=[
                 media_player.Features.ON_OFF,
                 media_player.Features.PLAY_PAUSE,

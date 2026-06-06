@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from ucapi import RequestUserInput
@@ -11,6 +12,8 @@ from uc_intg_spotify.client import SpotifyClient
 from uc_intg_spotify.config import SpotifyDeviceConfig
 
 _LOG = logging.getLogger(__name__)
+
+_IDENTIFIER_RE = re.compile(r"[^a-z0-9_]+")
 
 
 class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
@@ -37,7 +40,9 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
                                 "3. App Name: 'UC Remote Integration'\n"
                                 "4. Redirect URI: https://example.com/callback\n"
                                 "5. Check 'Web API' and save\n"
-                                "6. Copy Client ID and Client Secret below"
+                                "6. Copy Client ID and Client Secret below\n\n"
+                                "\n\n"
+                                "Note: You can add multiple Spotify accounts by running setup again.\n\n"
                             }
                         }
                     },
@@ -123,23 +128,47 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
         token_data = await client.exchange_code_for_token(
             auth_code, self._client_id, self._client_secret
         )
-        await client.close()
 
         if not token_data:
+            await client.close()
             raise ConnectionError("Failed to authenticate with Spotify")
 
         access_token = token_data["access_token"]
         refresh_token = token_data["refresh_token"]
         expires_in = token_data.get("expires_in", 3600)
 
+        client.set_tokens(access_token, refresh_token)
+        user = await client.get_current_user()
+        await client.close()
+
+        account_id = _account_id(user)
+        account_name = _account_name(user, account_id)
+
         import time
 
         return SpotifyDeviceConfig(
-            identifier="spotify",
-            name="Spotify",
+            identifier=f"spotify_{_safe_identifier(account_id)}",
+            name=f"Spotify ({account_name})",
             client_id=self._client_id,
             client_secret=self._client_secret,
             access_token=access_token,
             refresh_token=refresh_token,
             token_expires_at=int(time.time()) + expires_in - 60,
         )
+
+
+def _account_id(user: dict[str, Any] | None) -> str:
+    if not user:
+        return "account"
+    return str(user.get("id") or user.get("email") or user.get("display_name") or "account")
+
+
+def _account_name(user: dict[str, Any] | None, fallback: str) -> str:
+    if not user:
+        return fallback
+    return str(user.get("display_name") or user.get("email") or user.get("id") or fallback)
+
+
+def _safe_identifier(value: str) -> str:
+    safe = _IDENTIFIER_RE.sub("_", value.lower()).strip("_")
+    return safe or "account"

@@ -25,7 +25,7 @@ class SpotifyDeviceSelect(SelectEntity):
 
         super().__init__(
             entity_id,
-            "Spotify Active Device",
+            f"{device_config.name} Active Device",
             {
                 Attributes.STATE: States.UNAVAILABLE,
                 Attributes.OPTIONS: [],

@@ -229,6 +229,9 @@ class SpotifyClient:
     async def get_queue(self) -> dict[str, Any] | None:
         return await self._api_request("GET", "/me/player/queue")
 
+    async def get_current_user(self) -> dict[str, Any] | None:
+        return await self._api_request("GET", "/me")
+
     # ── Playback Control ──
 
     async def play(self, device_id: str | None = None) -> bool:
