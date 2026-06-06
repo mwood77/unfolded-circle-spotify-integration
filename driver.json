@@ -1,6 +1,6 @@
 {
   "driver_id": "spotify",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "min_core_api": "0.22.0",
   "name": {
     "en": "Spotify"
@@ -10,16 +10,16 @@
     "en": "Control Spotify playback with media browsing, search, and library access."
   },
   "developer": {
-    "name": "Meir Miyara",
-    "email": "meir.miyara@gmail.com",
-    "url": "https://github.com/mase1981"
+    "name": "Michael Wood",
+    "url": "https://github.com/mwood77"
   },
-  "home_page": "https://github.com/mase1981/uc-intg-spotify",
+  "home_page": "https://github.com/mwood77/unfolded-circle-spotify-integration",
   "setup_data_schema": {
     "title": {
       "en": "Spotify Setup"
     },
     "settings": [
+
       {
         "id": "info",
         "label": {

@@ -3,11 +3,11 @@ requires = ["setuptools>=65.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "uc-intg-spotify"
+name = "unfolded-circle-spotify-integration"
 dynamic = ["version"]
 description = "Spotify integration for Unfolded Circle Remote Two"
 authors = [
-    {name = "Meir Miyara", email = "meir.miyara@gmail.com"}
+    {name = "Michael Wood"}
 ]
 readme = "README.md"
 license = {text = "MPL-2.0"}
@@ -33,12 +33,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mase1981/uc-intg-spotify"
-"Bug Reports" = "https://github.com/mase1981/uc-intg-spotify/issues"
-Source = "https://github.com/mase1981/uc-intg-spotify"
+Homepage = "https://github.com/mwood77/unfolded-circle-spotify-integration"
+"Bug Reports" = "https://github.com/mwood77/unfolded-circle-spotify-integration/issues"
+Source = "https://github.com/mwood77/unfolded-circle-spotify-integration"
 
 [tool.setuptools]
-packages = ["uc_intg_spotify"]
+packages = ["unfolded-circle-spotify-integration"]
 
 [tool.setuptools.dynamic]
 version = {attr = "uc_intg_spotify.__version__"}
