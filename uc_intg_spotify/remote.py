@@ -28,6 +28,8 @@ SIMPLE_COMMANDS = [
     "SHUFFLE",
     "REPEAT",
     "ADD_TO_QUEUE",
+    "STOP_SEND",
+    "remote.stop_send",
 ]
 
 
@@ -63,9 +65,12 @@ class SpotifyRemote(RemoteEntity):
             return StatusCodes.SERVICE_UNAVAILABLE
 
         try:
-            if cmd_id == remote.Commands.SEND_CMD:
+            command = _remote_command_name(cmd_id)
+            if _is_stop_send_command(command):
+                return StatusCodes.OK
+            if command in (_remote_command_name(remote.Commands.SEND_CMD), "SEND_CMD", "SEND"):
                 return await self._handle_send_cmd(client, params)
-            return StatusCodes.NOT_IMPLEMENTED
+            return await self._handle_send_cmd(client, {"command": cmd_id, **(params or {})})
         except Exception as err:
             _LOG.error("Remote command %s failed: %s", cmd_id, err)
             return StatusCodes.SERVER_ERROR
@@ -74,8 +79,11 @@ class SpotifyRemote(RemoteEntity):
         if not params or "command" not in params:
             return StatusCodes.BAD_REQUEST
 
-        command = params["command"]
+        command = _remote_command_name(params["command"])
         ok = False
+
+        if command in ("STOP_SEND", "REMOTE.STOP_SEND"):
+            return StatusCodes.OK
 
         if command == "PLAY_PAUSE":
             if self._device._is_playing:
@@ -149,6 +157,17 @@ class SpotifyRemote(RemoteEntity):
             return StatusCodes.NOT_IMPLEMENTED
 
         return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
+
+
+def _remote_command_name(command: Any) -> str:
+    name = str(getattr(command, "value", command)).upper()
+    if name.startswith("REMOTE."):
+        return name[len("REMOTE."):]
+    return name
+
+
+def _is_stop_send_command(command: Any) -> bool:
+    return _remote_command_name(command) == "STOP_SEND"
 
 
 def _create_button_mappings() -> list[Any]:

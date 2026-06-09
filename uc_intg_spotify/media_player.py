@@ -21,10 +21,6 @@ def _optional_features(*names: str) -> list[Any]:
     return [feature for name in names if (feature := getattr(media_player.Features, name, None)) is not None]
 
 
-def _feature_values(*features: Any) -> list[str]:
-    return [str(getattr(feature, "value", feature)) for feature in features]
-
-
 def _attr(name: str, fallback: str) -> Any:
     return getattr(media_player.Attributes, name, fallback)
 
@@ -33,8 +29,11 @@ def _command(name: str, fallback: str) -> str:
     return getattr(media_player.Commands, name, fallback)
 
 
-def _player_options() -> dict[str, Any]:
-    return {"stable_id_support": 5}
+def _command_value(command: Any) -> str:
+    value = str(getattr(command, "value", command)).lower()
+    if value.startswith("media_player."):
+        return value[len("media_player."):]
+    return value
 
 
 def _search_media_classes() -> list[Any]:
@@ -47,9 +46,13 @@ def _search_media_classes() -> list[Any]:
 
 
 def _shuffle_from_params(params: dict[str, Any] | None, default: bool) -> bool:
-    if not params or "shuffle" not in params:
+    if not params:
         return default
-    value = params["shuffle"]
+    value = params.get("shuffle")
+    if value is None:
+        value = params.get("state")
+    if value is None:
+        return default
     if isinstance(value, str):
         return value.lower() in ("1", "true", "yes", "on")
     return bool(value)
@@ -88,7 +91,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         super().__init__(
             entity_id,
             "Spotify Player",
-            features=_feature_values(
+            features=[
                 media_player.Features.ON_OFF,
                 media_player.Features.PLAY_PAUSE,
                 media_player.Features.NEXT,
@@ -111,14 +114,13 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 media_player.Features.SEARCH_MEDIA,
                 media_player.Features.SEARCH_MEDIA_CLASSES,
                 media_player.Features.SELECT_SOURCE,
-            ),
+            ],
             attributes={
                 media_player.Attributes.STATE: media_player.States.UNAVAILABLE,
                 media_player.Attributes.MEDIA_TYPE: "MUSIC",
                 media_player.Attributes.SEARCH_MEDIA_CLASSES: _search_media_classes(),
             },
             device_class=media_player.DeviceClasses.SPEAKER,
-            options=_player_options(),
             cmd_handler=self._handle_command,
         )
         self.subscribe_to_device(device)
@@ -186,17 +188,19 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
             return StatusCodes.SERVER_ERROR
 
     async def _dispatch_command(self, client, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
-        if cmd_id == media_player.Commands.ON:
+        cmd = _command_value(cmd_id)
+
+        if cmd == _command_value(media_player.Commands.ON):
             return StatusCodes.OK
 
-        if cmd_id == media_player.Commands.OFF:
+        if cmd == _command_value(media_player.Commands.OFF):
             ok = await client.pause()
             if ok:
                 self._device.set_playing_state(False)
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.PLAY_PAUSE:
+        if cmd == _command_value(media_player.Commands.PLAY_PAUSE):
             if self._device._is_playing:
                 ok = await client.pause()
                 is_playing = False
@@ -209,65 +213,65 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.NEXT:
+        if cmd == _command_value(media_player.Commands.NEXT):
             ok = await client.next_track()
             if ok:
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.PREVIOUS:
+        if cmd == _command_value(media_player.Commands.PREVIOUS):
             ok = await client.previous_track()
             if ok:
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.VOLUME:
+        if cmd == _command_value(media_player.Commands.VOLUME):
             volume = int(params.get("volume", 50)) if params else 50
             ok = await client.set_volume(volume)
             if ok:
                 self._device.set_volume_state(volume)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.VOLUME_UP:
+        if cmd == _command_value(media_player.Commands.VOLUME_UP):
             new_vol = min(100, self._device._volume + 1)
             ok = await client.set_volume(new_vol)
             if ok:
                 self._device.set_volume_state(new_vol)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.VOLUME_DOWN:
+        if cmd == _command_value(media_player.Commands.VOLUME_DOWN):
             new_vol = max(0, self._device._volume - 1)
             ok = await client.set_volume(new_vol)
             if ok:
                 self._device.set_volume_state(new_vol)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == _command("MUTE_TOGGLE", "mute_toggle"):
+        if cmd == _command_value(_command("MUTE_TOGGLE", "mute_toggle")):
             volume = self._device.get_unmute_volume() if self._device._muted else 0
             ok = await client.set_volume(volume)
             if ok:
                 self._device.set_volume_state(volume)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == _command("MUTE", "mute"):
+        if cmd == _command_value(_command("MUTE", "mute")):
             ok = await client.set_volume(0)
             if ok:
                 self._device.set_volume_state(0)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == _command("UNMUTE", "unmute"):
+        if cmd == _command_value(_command("UNMUTE", "unmute")):
             volume = self._device.get_unmute_volume()
             ok = await client.set_volume(volume)
             if ok:
                 self._device.set_volume_state(volume)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.SEEK:
+        if cmd == _command_value(media_player.Commands.SEEK):
             position = params.get("media_position", 0) if params else 0
             ok = await client.seek(int(position) * 1000)
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.SHUFFLE:
+        if cmd == _command_value(media_player.Commands.SHUFFLE):
             shuffle = _shuffle_from_params(params, not self._device._shuffle)
             ok = await client.set_shuffle(shuffle)
             if ok:
@@ -275,7 +279,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.REPEAT:
+        if cmd == _command_value(media_player.Commands.REPEAT):
             cycle = {"off": "context", "context": "track", "track": "off"}
             new_state = _repeat_from_params(params, cycle.get(self._device._repeat, "off"))
             ok = await client.set_repeat(new_state)
@@ -284,13 +288,13 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.PLAY_MEDIA:
+        if cmd == _command_value(media_player.Commands.PLAY_MEDIA):
             return await self._handle_play_media(client, params)
 
-        if cmd_id == media_player.Commands.SELECT_SOURCE:
+        if cmd == _command_value(media_player.Commands.SELECT_SOURCE):
             return await self._handle_select_source(client, params)
 
-        _LOG.warning("Unhandled command: %s", cmd_id)
+        _LOG.warning("Unhandled command: %s", cmd)
         return StatusCodes.NOT_IMPLEMENTED
 
     async def _handle_select_source(self, client, params: dict[str, Any] | None) -> StatusCodes:
