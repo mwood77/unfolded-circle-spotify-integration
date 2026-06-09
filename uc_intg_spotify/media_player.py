@@ -21,12 +21,29 @@ def _optional_features(*names: str) -> list[Any]:
     return [feature for name in names if (feature := getattr(media_player.Features, name, None)) is not None]
 
 
+def _feature_values(*features: Any) -> list[str]:
+    return [str(getattr(feature, "value", feature)) for feature in features]
+
+
 def _attr(name: str, fallback: str) -> Any:
     return getattr(media_player.Attributes, name, fallback)
 
 
 def _command(name: str, fallback: str) -> str:
     return getattr(media_player.Commands, name, fallback)
+
+
+def _player_options() -> dict[str, Any]:
+    return {"stable_id_support": 5}
+
+
+def _search_media_classes() -> list[Any]:
+    return [
+        media_player.MediaClass.TRACK,
+        media_player.MediaClass.ALBUM,
+        media_player.MediaClass.ARTIST,
+        media_player.MediaClass.PLAYLIST,
+    ]
 
 
 def _shuffle_from_params(params: dict[str, Any] | None, default: bool) -> bool:
@@ -71,7 +88,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         super().__init__(
             entity_id,
             "Spotify Player",
-            features=[
+            features=_feature_values(
                 media_player.Features.ON_OFF,
                 media_player.Features.PLAY_PAUSE,
                 media_player.Features.NEXT,
@@ -92,13 +109,16 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 media_player.Features.PLAY_MEDIA,
                 media_player.Features.BROWSE_MEDIA,
                 media_player.Features.SEARCH_MEDIA,
+                media_player.Features.SEARCH_MEDIA_CLASSES,
                 media_player.Features.SELECT_SOURCE,
-            ],
+            ),
             attributes={
                 media_player.Attributes.STATE: media_player.States.UNAVAILABLE,
                 media_player.Attributes.MEDIA_TYPE: "MUSIC",
+                media_player.Attributes.SEARCH_MEDIA_CLASSES: _search_media_classes(),
             },
             device_class=media_player.DeviceClasses.SPEAKER,
+            options=_player_options(),
             cmd_handler=self._handle_command,
         )
         self.subscribe_to_device(device)
@@ -115,6 +135,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         attrs: dict[str, Any] = {
             media_player.Attributes.STATE: state,
             media_player.Attributes.MEDIA_TYPE: "MUSIC",
+            media_player.Attributes.SEARCH_MEDIA_CLASSES: _search_media_classes(),
         }
 
         if d._state in ("PLAYING", "PAUSED"):
@@ -263,11 +284,11 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.SELECT_SOURCE:
-            return await self._handle_select_source(client, params)
-
         if cmd_id == media_player.Commands.PLAY_MEDIA:
             return await self._handle_play_media(client, params)
+
+        if cmd_id == media_player.Commands.SELECT_SOURCE:
+            return await self._handle_select_source(client, params)
 
         _LOG.warning("Unhandled command: %s", cmd_id)
         return StatusCodes.NOT_IMPLEMENTED
