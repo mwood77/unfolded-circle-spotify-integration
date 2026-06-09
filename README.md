@@ -22,7 +22,7 @@ This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The origi
 - **Media Browser Button** — Open Spotify library browsing from the Spotify Player UI
 - **Volume Management** — Slider volume control
 - **Media Metadata** — Title, artist, album artwork, and playback position.
-- **Spotify Connect Device Selection** — Switch active playback devices with the Spotify Active Device entity
+- **Spotify Connect Quick Switch** — Switch active playback devices from the Spotify Player UI or Spotify Active Device entity
 - **Real-time Updates** — 10-second polling with optimistic state updates
 
 ### Media Browser

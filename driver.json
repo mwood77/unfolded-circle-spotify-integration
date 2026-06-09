@@ -1,6 +1,6 @@
 {
-  "driver_id": "spotify",
-  "version": "4.2.0",
+  "driver_id": "uc-spotify-integration",
+  "version": "4.0.1",
   "min_core_api": "0.22.0",
   "name": {
     "en": "Spotify"
