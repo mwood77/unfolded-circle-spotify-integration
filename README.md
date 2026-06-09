@@ -19,9 +19,10 @@ This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The origi
 #### Spotify Media Player
 
 - **UI Playback Controls** — Play/Pause, Next, Previous, Seek, Shuffle, Repeat
+- **Media Browser Button** — Open Spotify library browsing from the Spotify Player UI
 - **Volume Management** — Slider volume control
 - **Media Metadata** — Title, artist, album artwork, and playback position.
-- **Spotify Connect Source Selection** — Switch between 3 playback devices using your remote
+- **Spotify Connect Device Selection** — Switch active playback devices with the Spotify Active Device entity
 - **Real-time Updates** — 10-second polling with optimistic state updates
 
 ### Media Browser

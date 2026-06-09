@@ -1,6 +1,6 @@
 {
   "driver_id": "spotify",
-  "version": "4.0.0",
+  "version": "4.2.0",
   "min_core_api": "0.22.0",
   "name": {
     "en": "Spotify"
@@ -28,12 +28,12 @@
         "field": {
           "label": {
             "value": {
-              "en": "Enter your Spotify Developer App credentials on the next screen."
+              "en": "Enter your Spotify Developer App credentials on the next screen, or restore from a backup if you have previously set up this driver."
             }
           }
         }
       }
     ]
   },
-  "release_date": "2026-05-24"
+  "release_date": "2026-06-09"
 }

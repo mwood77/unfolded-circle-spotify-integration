@@ -21,12 +21,29 @@ def _optional_features(*names: str) -> list[Any]:
     return [feature for name in names if (feature := getattr(media_player.Features, name, None)) is not None]
 
 
+def _feature_values(*features: Any) -> list[str]:
+    return [str(getattr(feature, "value", feature)) for feature in features]
+
+
 def _attr(name: str, fallback: str) -> Any:
     return getattr(media_player.Attributes, name, fallback)
 
 
 def _command(name: str, fallback: str) -> str:
     return getattr(media_player.Commands, name, fallback)
+
+
+def _player_options() -> dict[str, Any]:
+    return {"stable_id_support": 5}
+
+
+def _search_media_classes() -> list[Any]:
+    return [
+        media_player.MediaClass.TRACK,
+        media_player.MediaClass.ALBUM,
+        media_player.MediaClass.ARTIST,
+        media_player.MediaClass.PLAYLIST,
+    ]
 
 
 def _shuffle_from_params(params: dict[str, Any] | None, default: bool) -> bool:
@@ -71,7 +88,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         super().__init__(
             entity_id,
             "Spotify Player",
-            features=[
+            features=_feature_values(
                 media_player.Features.ON_OFF,
                 media_player.Features.PLAY_PAUSE,
                 media_player.Features.NEXT,
@@ -92,13 +109,15 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 media_player.Features.PLAY_MEDIA,
                 media_player.Features.BROWSE_MEDIA,
                 media_player.Features.SEARCH_MEDIA,
-                media_player.Features.SELECT_SOURCE,
-            ],
+                media_player.Features.SEARCH_MEDIA_CLASSES,
+            ),
             attributes={
                 media_player.Attributes.STATE: media_player.States.UNAVAILABLE,
                 media_player.Attributes.MEDIA_TYPE: "MUSIC",
+                media_player.Attributes.SEARCH_MEDIA_CLASSES: _search_media_classes(),
             },
             device_class=media_player.DeviceClasses.SPEAKER,
+            options=_player_options(),
             cmd_handler=self._handle_command,
         )
         self.subscribe_to_device(device)
@@ -115,6 +134,9 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
         attrs: dict[str, Any] = {
             media_player.Attributes.STATE: state,
             media_player.Attributes.MEDIA_TYPE: "MUSIC",
+            media_player.Attributes.SEARCH_MEDIA_CLASSES: _search_media_classes(),
+            media_player.Attributes.SOURCE: "",
+            media_player.Attributes.SOURCE_LIST: [],
         }
 
         if d._state in ("PLAYING", "PAUSED"):
@@ -129,13 +151,7 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 _attr("MUTED", "muted"): d._muted,
                 media_player.Attributes.SHUFFLE: d._shuffle,
                 media_player.Attributes.REPEAT: _repeat_to_uc(d._repeat),
-                media_player.Attributes.SOURCE: d._source_name,
-                media_player.Attributes.SOURCE_LIST: d._source_list,
             })
-        elif d._state == "ON":
-            attrs[media_player.Attributes.SOURCE_LIST] = d._source_list
-            if d._source_name:
-                attrs[media_player.Attributes.SOURCE] = d._source_name
 
         self.update(attrs)
 
@@ -263,30 +279,11 @@ class SpotifyMediaPlayer(MediaPlayerEntity):
                 self._device.schedule_playback_refresh()
             return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
-        if cmd_id == media_player.Commands.SELECT_SOURCE:
-            return await self._handle_select_source(client, params)
-
         if cmd_id == media_player.Commands.PLAY_MEDIA:
             return await self._handle_play_media(client, params)
 
         _LOG.warning("Unhandled command: %s", cmd_id)
         return StatusCodes.NOT_IMPLEMENTED
-
-    async def _handle_select_source(self, client, params: dict[str, Any] | None) -> StatusCodes:
-        if not params:
-            return StatusCodes.BAD_REQUEST
-
-        source = params.get("source", "")
-        if not source:
-            return StatusCodes.BAD_REQUEST
-
-        device_id = self._device.get_device_id_by_name(source)
-        if not device_id:
-            _LOG.warning("Device not found: %s", source)
-            return StatusCodes.BAD_REQUEST
-
-        ok = await client.transfer_playback(device_id)
-        return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
 
     async def _handle_play_media(self, client, params: dict[str, Any] | None) -> StatusCodes:
         if not params:
