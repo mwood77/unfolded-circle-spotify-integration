@@ -52,6 +52,7 @@ Thumbs.db
 *.temp
 artifacts/
 uc-intg-*-aarch64.tar.gz
+uc-spotify-integration-*-aarch64.tar.gz
 tmpclaude-*
 
 # Claude knowledge base (local only, never commit)
