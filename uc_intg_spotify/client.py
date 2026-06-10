@@ -305,8 +305,15 @@ class SpotifyClient:
         )
 
     async def get_playlist(self, playlist_id: str) -> dict[str, Any] | None:
+        fields = urllib.parse.quote("name,images")
+        return await self._api_request("GET", f"/playlists/{playlist_id}?fields={fields}")
+
+    async def get_playlist_items(
+        self, playlist_id: str, limit: int = 50, offset: int = 0
+    ) -> dict[str, Any] | None:
         return await self._api_request(
-            "GET", f"/playlists/{playlist_id}?market=from_token"
+            "GET",
+            f"/playlists/{playlist_id}/items?limit={limit}&offset={offset}&market=from_token",
         )
 
     async def get_saved_tracks(
@@ -326,13 +333,16 @@ class SpotifyClient:
     async def get_album(self, album_id: str) -> dict[str, Any] | None:
         return await self._api_request("GET", f"/albums/{album_id}?market=from_token")
 
+    async def get_album_tracks(
+        self, album_id: str, limit: int = 50, offset: int = 0
+    ) -> dict[str, Any] | None:
+        return await self._api_request(
+            "GET",
+            f"/albums/{album_id}/tracks?limit={limit}&offset={offset}&market=from_token",
+        )
+
     async def get_artist(self, artist_id: str) -> dict[str, Any] | None:
         return await self._api_request("GET", f"/artists/{artist_id}")
-
-    async def get_artist_top_tracks(self, artist_id: str) -> dict[str, Any] | None:
-        return await self._api_request(
-            "GET", f"/artists/{artist_id}/top-tracks?market=from_token"
-        )
 
     async def get_artist_albums(
         self, artist_id: str, limit: int = 20, offset: int = 0
@@ -361,26 +371,18 @@ class SpotifyClient:
             "GET", f"/me/top/tracks?limit={limit}&offset={offset}&market=from_token"
         )
 
-    async def get_followed_artists(self, limit: int = 50) -> dict[str, Any] | None:
-        return await self._api_request(
-            "GET", f"/me/following?type=artist&limit={limit}"
-        )
-
-    async def get_new_releases(
-        self, limit: int = 20, offset: int = 0
+    async def get_followed_artists(
+        self, limit: int = 50, after: str | None = None
     ) -> dict[str, Any] | None:
-        return await self._api_request(
-            "GET", f"/browse/new-releases?limit={limit}&offset={offset}"
-        )
-
-    async def get_categories(self, limit: int = 20) -> dict[str, Any] | None:
-        return await self._api_request(
-            "GET", f"/browse/categories?limit={limit}"
-        )
+        endpoint = f"/me/following?type=artist&limit={limit}"
+        if after:
+            endpoint += f"&after={urllib.parse.quote(after)}"
+        return await self._api_request("GET", endpoint)
 
     async def search(
-        self, query: str, limit: int = 20, offset: int = 0
+        self, query: str, limit: int = 10, offset: int = 0
     ) -> dict[str, Any] | None:
+        limit = max(1, min(limit, 10))
         encoded = urllib.parse.quote(query)
         return await self._api_request(
             "GET",

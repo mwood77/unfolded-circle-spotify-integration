@@ -19,12 +19,16 @@ This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The origi
 #### Spotify Media Player
 
 - **UI Playback Controls** — Play/Pause, Next, Previous, Seek, Shuffle, Repeat
+- **Media Browser Button** — Open Spotify library browsing from the Spotify Player UI
 - **Volume Management** — Slider volume control
 - **Media Metadata** — Title, artist, album artwork, and playback position.
-- **Spotify Connect Source Selection** — Switch between 3 playback devices using your remote
+- **Spotify Connect Quick Switch** — Switch active playback devices from the Spotify Player UI or Spotify Active Device entity
 - **Real-time Updates** — 10-second polling with optimistic state updates
 
-<!-- ### 📂 Media Browser
+### Media Browser & Media Search
+
+> [!IMPORTANT]
+> Media browsing and Search requires Unfolded Circle remote firmware `2.9.5` or newer. At the time of publication, this is only available in BETA firmware.
 
 Browse and play your Spotify library directly from the Remote's media browser:
 
@@ -32,11 +36,14 @@ Browse and play your Spotify library directly from the Remote's media browser:
 - **Saved Albums** — Your album library
 - **Liked Songs** — Saved tracks collection
 - **Top Tracks** — Your most-played tracks
-- **Top Artists** — Your most-listened artists with top tracks and discography
+- **Top Artists** — Your most-listened artists with paged discography browsing
 - **Followed Artists** — Artists you follow
 - **Recently Played** — Recent listening history
-- **New Releases** — Latest album releases
-- **Search** — Full-text search across tracks, albums, artists, and playlists -->
+- **Search** — Full-text search across tracks, albums, artists, and playlists
+
+Spotify removed the public Browse Categories, New Releases, and Artist Top Tracks
+endpoints for Development Mode apps in 2026, so those surfaces are intentionally
+not exposed by this integration.
 
 
 #### Sensor Entities
@@ -50,32 +57,39 @@ Browse and play your Spotify library directly from the Remote's media browser:
 
 ## Prerequisites
 
+- **Spotify Premium required**
+  - Spotify updated their developer application and public API in February/March of 2026. These changes reduced some functionality granted to developer applications and introduced a mandatory Spotify Premium account.
+- **This integration will not work without a Spotify Premium account(s)**
+- **Remote firmware `2.9.5` or newer required for media browsing and search**
+  - At the time of publishing, `2.9.5` is currently in BETA.
+  - The integration supports mainline firmware, but the media browsing and search will be disabled.
+- **You must create a Spotify Developer Application during setup**
+  - This is free.
+
 ### Spotify Developer App Setup
 
 **BEFORE INSTALLATION:** Create a Spotify Developer App (free, 5 minutes):
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Log in with your **Premium** Spotify account
-3. Click **"Create App"**
+3. Click **Create app**
+    - If that button isn't visible, click on your account name, then click **Dashboard**. If prompted accept Spotify's Developer Terms.
+  - If you had to accept their Deve
 4. Fill in:
-   - **App Name**: `UC Remote` (or any name)
+   - **App Name**: `UC Remote Integration` (or any name)
    - **App Description**: `Unfolded Circle Remote integration`
-   - **Redirect URI**: `https://example.com/callback` ⚠️ **Must be exactly this**
-   - **API**: Check **"Web API"**
+   - **Redirect URI**: `https://example.com/callback` 
+      - *You must fill this in exactly as specified above, and click the "Add" button*
+   - **Which API/SDKs are you planning to use?:**
+      - Select **Web API**. Leave the rest unselected
 5. Click **"Save"**
-6. Note your **Client ID** and **Client Secret** (click "Show Client Secret")
-
-#### Important Notes:
-- ✅ **Spotify Premium required** — API no longer supports Free accounts
-- ✅ Redirect URI must be **exactly** `https://example.com/callback`
-- ✅ Keep credentials secure — don't share them
-- ✅ No recurring costs — one-time setup
+6. On the next screen, you'll see a **Client ID** and **Client Secret** (click "View client secret"). Write these values down as you'll need them during the installation setup.
 
 ## Installation
 
 ### 1. Remote Web Interface (Recommended)
 1. Navigate to the [**Releases**](https://github.com/mwood77/unfolded-circle-spotify-integration/releases) page
-2. Download the latest `uc-intg-spotify-<version>-aarch64.tar.gz` file
+2. Download the latest `unfolded-circle-spotify-integration-<version>-aarch64.tar.gz` file
 3. Open your remote's web interface (`http://your-remote-ip`)
 4. Go to **Settings** → **Integrations** → **Add Integration**
 5. Click **Upload** and select the downloaded `.tar.gz` file
@@ -87,7 +101,7 @@ Browse and play your Spotify library directly from the Remote's media browser:
 **Docker Compose:**
 ```yaml
 services:
-  uc-intg-spotify:
+  unfolded-circle-spotify-integration:
     image: ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
     container_name: unfolded-circle-spotify-integration
     network_mode: host
@@ -102,7 +116,7 @@ services:
 
 **Docker Run:**
 ```bash
-docker run -d --name=uc-intg-spotify --network host -v </local/path>:/data -e UC_CONFIG_HOME=/data -e UC_INTEGRATION_HTTP_PORT=9090 -e PYTHONPATH=/app --restart unless-stopped ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
+docker run -d --name=unfolded-circle-spotify-integration --network host -v </local/path>:/data -e UC_CONFIG_HOME=/data -e UC_INTEGRATION_HTTP_PORT=9090 -e PYTHONPATH=/app --restart unless-stopped ghcr.io/mwood77/unfolded-circle-spotify-integration:latest
 ```
 
 ## Configuration
