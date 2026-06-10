@@ -1,11 +1,6 @@
 # Spotify Integration for Unfolded Circle Remote 2/3
 
-Control Spotify playback directly from your Unfolded Circle Remote 2 or Remote 3 with **full media control**, **Spotify Connect device switching**, and **real-time playback updates** with album artwork.
-
-This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The original project was written without without hardware testing or any kind of validation. This meant a number of usability regressions (bugs) entered each release. The author wasn't receptive to feedback and shadowbanned me from his repositories. Hence, this fork.
-
-**_Development in this repository is active and welcomes all feedback and feature requests._ Have you found a bug or want a feature? Submit it here:**
-- [unfolded-circle-spotify-integration/issues](https://github.com/mwood77/unfolded-circle-spotify-integration/issues)
+Control Spotify playback directly from your Unfolded Circle Remote 2 or Remote 3 with full media control, Spotify Connect device switching, and real-time playback metadata (updates & album artwork).
 
 ## Core Features
 
@@ -162,6 +157,12 @@ After the build is complete, you'll find your tarball. Simply install it like an
 This project is licensed under the MPL-2.0 License - see LICENSE file for details.
 
 Originally derived from [`uc-intg-spotify`](https://github.com/mase1981/uc-intg-spotify) by [`mase1981`](https://github.com/mase1981).
+
+### Why the forK
+This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The original project was written without without hardware testing or any kind of validation. This meant a number of usability regressions (bugs) entered each release. The author wasn't receptive to feedback and shadowbanned me from his repositories. Hence, this fork.
+
+**_Development in this repository is active and welcomes all feedback and feature requests._ Have you found a bug or want a feature? Submit it here:**
+- [unfolded-circle-spotify-integration/issues](https://github.com/mwood77/unfolded-circle-spotify-integration/issues)
 
 ## Legal Disclaimer
 
