@@ -25,7 +25,10 @@ This project is a disconnected fork of `uc-intg-spotify` by @mase1981. The origi
 - **Spotify Connect Quick Switch** — Switch active playback devices from the Spotify Player UI or Spotify Active Device entity
 - **Real-time Updates** — 10-second polling with optimistic state updates
 
-### Media Browser
+### Media Browser & Media Search
+
+> [!IMPORTANT]
+> Media browsing and Search requires Unfolded Circle remote firmware `2.9.5` or newer. At the time of publication, this is only available in BETA firmware.
 
 Browse and play your Spotify library directly from the Remote's media browser:
 
@@ -54,26 +57,33 @@ not exposed by this integration.
 
 ## Prerequisites
 
+- **Spotify Premium required**
+  - Spotify updated their developer application and public API in February/March of 2026. These changes reduced some functionality granted to developer applications and introduced a mandatory Spotify Premium account.
+- **This integration will not work without a Spotify Premium account(s)**
+- **Remote firmware `2.9.5` or newer required for media browsing and search**
+  - At the time of publishing, `2.9.5` is currently in BETA.
+  - The integration supports mainline firmware, but the media browsing and search will be disabled.
+- **You must create a Spotify Developer Application during setup**
+  - This is free.
+
 ### Spotify Developer App Setup
 
 **BEFORE INSTALLATION:** Create a Spotify Developer App (free, 5 minutes):
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Log in with your **Premium** Spotify account
-3. Click **"Create App"**
+3. Click **Create app**
+    - If that button isn't visible, click on your account name, then click **Dashboard**. If prompted accept Spotify's Developer Terms.
+  - If you had to accept their Deve
 4. Fill in:
-   - **App Name**: `UC Remote` (or any name)
+   - **App Name**: `UC Remote Integration` (or any name)
    - **App Description**: `Unfolded Circle Remote integration`
-   - **Redirect URI**: `https://example.com/callback` ⚠️ **Must be exactly this**
-   - **API**: Check **"Web API"**
+   - **Redirect URI**: `https://example.com/callback` 
+      - *You must fill this in exactly as specified above, and click the "Add" button*
+   - **Which API/SDKs are you planning to use?:**
+      - Select **Web API**. Leave the rest unselected
 5. Click **"Save"**
-6. Note your **Client ID** and **Client Secret** (click "Show Client Secret")
-
-#### Important Notes:
-- ✅ **Spotify Premium required** — API no longer supports Free accounts
-- ✅ Redirect URI must be **exactly** `https://example.com/callback`
-- ✅ Keep credentials secure — don't share them
-- ✅ No recurring costs — one-time setup
+6. On the next screen, you'll see a **Client ID** and **Client Secret** (click "View client secret"). Write these values down as you'll need them during the installation setup.
 
 ## Installation
 
