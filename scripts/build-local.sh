@@ -78,7 +78,7 @@ cd "$ROOT_DIR"
 VERSION="${VERSION:-${1:-$(json_value version)}}"
 DRIVER_BASE="$(json_value driver_id | sed 's/^uc-intg-//')"
 IMAGE="docker.io/unfoldedcircle/r2-pyinstaller:${PYTHON_VER}"
-ARTIFACT_NAME="uc-intg-${DRIVER_BASE}-${VERSION}-${ARCHIVE_ARCH}"
+ARTIFACT_NAME="${DRIVER_BASE}-${VERSION}-${ARCHIVE_ARCH}"
 
 if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
   echo "Could not determine version. Set VERSION or pass it as the first argument." >&2
