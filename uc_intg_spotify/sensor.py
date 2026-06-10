@@ -24,7 +24,7 @@ class SpotifyNowPlayingSensor(SensorEntity):
 
         super().__init__(
             entity_id,
-            "Spotify Now Playing",
+            f"{device_config.name} Now Playing",
             [],
             {
                 Attributes.STATE: States.UNAVAILABLE,
@@ -59,7 +59,7 @@ class SpotifyDeviceSensor(SensorEntity):
 
         super().__init__(
             entity_id,
-            "Spotify Active Device",
+            f"{device_config.name} Active Device",
             [],
             {
                 Attributes.STATE: States.UNAVAILABLE,

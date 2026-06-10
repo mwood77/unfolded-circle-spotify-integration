@@ -229,6 +229,9 @@ class SpotifyClient:
     async def get_queue(self) -> dict[str, Any] | None:
         return await self._api_request("GET", "/me/player/queue")
 
+    async def get_current_user(self) -> dict[str, Any] | None:
+        return await self._api_request("GET", "/me")
+
     # ── Playback Control ──
 
     async def play(self, device_id: str | None = None) -> bool:
@@ -286,6 +289,42 @@ class SpotifyClient:
             endpoint = f"/me/player/play?device_id={device_id}"
 
         return await self._api_request("PUT", endpoint, json=body) is not None
+
+    async def play_context(
+        self, context_uri: str, offset_uri: str | None = None, device_id: str | None = None
+    ) -> bool:
+        body: dict[str, Any] = {"context_uri": context_uri}
+        if offset_uri:
+            body["offset"] = {"uri": offset_uri}
+
+        endpoint = "/me/player/play"
+        if device_id:
+            endpoint = f"/me/player/play?device_id={device_id}"
+
+        return await self._api_request("PUT", endpoint, json=body) is not None
+
+    async def play_uris(
+        self, uris: list[str], offset: int = 0, device_id: str | None = None
+    ) -> bool:
+        if not uris:
+            return False
+
+        body: dict[str, Any] = {"uris": uris[:100]}
+        if offset > 0:
+            body["offset"] = {"position": offset}
+
+        endpoint = "/me/player/play"
+        if device_id:
+            endpoint = f"/me/player/play?device_id={device_id}"
+
+        ok = await self._api_request("PUT", endpoint, json=body) is not None
+        if ok or offset <= 0:
+            return ok
+
+        rotated = uris[offset:] + uris[:offset]
+        return await self._api_request(
+            "PUT", endpoint, json={"uris": rotated[:100]}
+        ) is not None
 
     async def transfer_playback(self, device_id: str, play: bool = True) -> bool:
         return await self._api_request(
