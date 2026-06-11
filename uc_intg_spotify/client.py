@@ -24,6 +24,7 @@ SCOPES = [
     "user-modify-playback-state",
     "user-read-private",
     "user-library-read",
+    "user-library-modify",
     "playlist-read-private",
     "playlist-read-collaborative",
     "user-top-read",
@@ -278,6 +279,52 @@ class SpotifyClient:
         encoded = urllib.parse.quote(uri)
         return await self._api_request("POST", f"/me/player/queue?uri={encoded}") is not None
 
+    async def is_library_saved(self, uri: str) -> bool | None:
+        encoded = urllib.parse.quote(uri)
+        data = await self._api_request("GET", f"/me/library/contains?uris={encoded}")
+        if isinstance(data, list) and data:
+            return bool(data[0])
+
+        track_id = _track_id_from_uri(uri)
+        if not track_id:
+            return None
+
+        data = await self._api_request("GET", f"/me/tracks/contains?ids={urllib.parse.quote(track_id)}")
+        if isinstance(data, list) and data:
+            return bool(data[0])
+        return None
+
+    async def save_library_item(self, uri: str) -> bool:
+        encoded = urllib.parse.quote(uri)
+        ok = await self._api_request("PUT", f"/me/library?uris={encoded}") is not None
+        if ok:
+            return True
+
+        track_id = _track_id_from_uri(uri)
+        if not track_id:
+            return False
+        return await self._api_request("PUT", "/me/tracks", json={"ids": [track_id]}) is not None
+
+    async def remove_library_item(self, uri: str) -> bool:
+        encoded = urllib.parse.quote(uri)
+        ok = await self._api_request("DELETE", f"/me/library?uris={encoded}") is not None
+        if ok:
+            return True
+
+        track_id = _track_id_from_uri(uri)
+        if not track_id:
+            return False
+        return await self._api_request("DELETE", "/me/tracks", json={"ids": [track_id]}) is not None
+
+    async def toggle_library_item(self, uri: str) -> bool | None:
+        saved = await self.is_library_saved(uri)
+        if saved is None:
+            return None
+        ok = await self.remove_library_item(uri) if saved else await self.save_library_item(uri)
+        if not ok:
+            return None
+        return not saved
+
     async def play_uri(self, uri: str, device_id: str | None = None) -> bool:
         if uri.startswith("spotify:track:"):
             body: dict[str, Any] = {"uris": [uri]}
@@ -431,3 +478,8 @@ class SpotifyClient:
     async def close(self) -> None:
         if self._session and not self._session.closed:
             await self._session.close()
+
+
+def _track_id_from_uri(uri: str) -> str:
+    prefix = "spotify:track:"
+    return uri[len(prefix):] if uri.startswith(prefix) else ""
