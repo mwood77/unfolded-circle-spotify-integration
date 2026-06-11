@@ -28,6 +28,7 @@ SIMPLE_COMMANDS = [
     "SHUFFLE",
     "REPEAT",
     "ADD_TO_QUEUE",
+    "TOGGLE_LIKE_CURRENT_TRACK",
 ]
 
 
@@ -144,11 +145,48 @@ class SpotifyRemote(RemoteEntity):
             if ok:
                 self._device.set_repeat_state(repeat)
                 self._device.schedule_playback_refresh()
+        elif command == "TOGGLE_LIKE_CURRENT_TRACK":
+            return await self._toggle_like_current_track(client)
         else:
             _LOG.warning("Unknown remote command: %s", command)
             return StatusCodes.NOT_IMPLEMENTED
 
         return StatusCodes.OK if ok else StatusCodes.SERVER_ERROR
+
+    async def _toggle_like_current_track(self, client) -> StatusCodes:
+        displayed_uri = self._device._media_uri
+        if not displayed_uri.startswith("spotify:track:"):
+            _LOG.warning("Cannot toggle like: displayed media is not a Spotify track")
+            return StatusCodes.BAD_REQUEST
+
+        playback = await client.get_playback_state()
+        if not playback:
+            return StatusCodes.SERVICE_UNAVAILABLE
+
+        spotify_uri = playback.get("uri", "")
+        spotify_type = playback.get("currently_playing_type", "")
+        if spotify_type != "track" or not spotify_uri.startswith("spotify:track:"):
+            _LOG.warning("Cannot toggle like: Spotify is not currently playing a track")
+            return StatusCodes.BAD_REQUEST
+
+        if spotify_uri != displayed_uri:
+            _LOG.info(
+                "Skipping like toggle because displayed track differs from Spotify: displayed=%s spotify=%s",
+                displayed_uri,
+                spotify_uri,
+            )
+            before = self._device._display_snapshot()
+            self._device._apply_playback_state(playback)
+            if self._device._display_snapshot() != before:
+                self._device.push_update()
+            return getattr(StatusCodes, "CONFLICT", StatusCodes.BAD_REQUEST)
+
+        saved = await client.toggle_library_item(spotify_uri)
+        if saved is None:
+            return StatusCodes.SERVER_ERROR
+
+        _LOG.info("%s current track in Liked Songs: %s", "Saved" if saved else "Removed", spotify_uri)
+        return StatusCodes.OK
 
 
 def _create_button_mappings() -> list[Any]:
@@ -161,7 +199,17 @@ def _create_button_mappings() -> list[Any]:
     ]
     if mute_button := getattr(Buttons, "MUTE", None):
         mappings.append(create_btn_mapping(mute_button, "MUTE_TOGGLE"))
+    for like_button in _buttons("RECORD", "REC", "STOP"):
+        mappings.append(create_btn_mapping(like_button, "TOGGLE_LIKE_CURRENT_TRACK"))
     return mappings
+
+
+def _buttons(*names: str) -> list[Any]:
+    buttons = []
+    for name in names:
+        if button := getattr(Buttons, name, None):
+            buttons.append(button)
+    return buttons
 
 
 def _create_ui_pages() -> list[UiPage]:

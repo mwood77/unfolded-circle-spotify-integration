@@ -6,8 +6,8 @@ Control Spotify playback directly from your Unfolded Circle Remote 2 or Remote 3
 
 ### Remote Controls (Physical and GUI)
 
-- **Physical Button Mapping** — Play/Pause, Next, Previous, Volume Up/Down (touch slider), Mute, 
-- **Custom UI Page (GUI)** — Tap the artwork to play/pause, swipe left/right to skip or restart tracks, shuffle toggle, and repeat.
+- **Physical Button Mapping** — Play/Pause, Next, Previous, Volume Up/Down, Mute, and Record/Stop for Liked Songs.
+- **Custom UI Page (GUI)** — Playback controls, volume, shuffle toggle, and repeat.
 
 ### Entities
 
@@ -19,6 +19,12 @@ Control Spotify playback directly from your Unfolded Circle Remote 2 or Remote 3
 - **Media Metadata** — Title, artist, album artwork, and playback position.
 - **Spotify Connect Quick Switch** — Switch active playback devices from the Spotify Player UI or Spotify Active Device entity
 - **Real-time Updates** — 10-second polling with optimistic state updates
+
+#### Spotify Remote Entity
+
+- **Physical Button Mapping** — Maps transport, volume, mute, and library actions to Remote 2/3 hardware buttons.
+- **Liked Songs Toggle** — Press Record or Stop to add/remove the currently displayed Spotify track from the user's Liked Songs.
+- **Custom UI Page** — Provides a compact playback page with previous, next, play/pause, volume, shuffle, and repeat.
 
 ### Media Browser & Media Search
 
@@ -136,7 +142,7 @@ docker run -d --name=unfolded-circle-spotify-integration --network host -v </loc
 
 Five entities are created automatically:
 - **Spotify (<account>) Player** — Media Player with browse, search, and playback control
-- **Spotify (<account>) Remote** — Remote entity with button mappings and custom UI
+- **Spotify (<account>) Remote** — Remote entity with button mappings, custom UI, and Liked Songs toggle
 - **Spotify (<account>) Active Device** — Select entity for device switching
 - **Spotify (<account>) Now Playing** — Sensor showing current track
 - **Spotify (<account>) Active Device** — Sensor showing active playback device
