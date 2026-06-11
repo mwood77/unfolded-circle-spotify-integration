@@ -1,17 +1,17 @@
 {
   "driver_id": "uc-spotify-integration",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "min_core_api": "0.22.0",
   "name": {
     "en": "Spotify"
   },
   "icon": "uc:cloud-music",
   "description": {
-    "en": "Control Spotify playback with media browsing, search, and library access."
+    "en": "Control multiple Spotify accounts with playback, media browsing, search, and library access."
   },
   "developer": {
     "name": "Michael Wood",
-    "url": "https://github.com/mwood77"
+    "url": "https://github.com/mwood77/unfolded-circle-spotify-integration"
   },
   "home_page": "https://github.com/mwood77/unfolded-circle-spotify-integration",
   "setup_data_schema": {

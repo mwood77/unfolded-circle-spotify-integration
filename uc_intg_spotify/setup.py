@@ -43,7 +43,7 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
                                 "5. Check 'Web API' and save\n"
                                 "6. Copy Client ID and Client Secret below\n\n"
                                 "\n\n"
-                                "Note: You can add multiple Spotify accounts by running setup again.\n\n"
+                                "Note: You can add multiple Spotify accounts by running this setup again.\n\n"
                             }
                         }
                     },
@@ -97,7 +97,7 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
 
             if not token_data:
                 return self._auth_form(
-                    "Spotify rejected that callback/code. Start the Spotify authorization again and paste the new callback URL."
+                    "Spotify rejected that callback/code."
                 )
 
             access_token = token_data["access_token"]
@@ -134,28 +134,50 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
             "4. Copy the URL from your browser's address bar\n"
             "5. Paste the URL below"
         )
+        settings: list[dict[str, Any]] = []
         if error:
-            instructions = f"{error}\n\n{instructions}"
+            settings.append({
+                "id": "error",
+                "label": {"en": "Could not authenticate"},
+                "field": {
+                    "label": {
+                        "value": {
+                            "en": (
+                                f"{error}\n\n"
+                                "Your Spotify Client ID and Client Secret were kept. "
+                                "Open the authorization URL again and paste the new callback URL below."
+                            )
+                        }
+                    }
+                },
+            })
+
+        settings.extend([
+            {
+                "id": "instructions",
+                "label": {"en": "Authentication Instructions"},
+                "field": {"label": {"value": {"en": instructions}}},
+            },
+            {
+                "id": "spotify_url",
+                "label": {"en": "Spotify Authorization URL"},
+                "field": {"text": {"value": auth_url, "read_only": True}},
+            },
+            {
+                "id": "auth_code",
+                "label": {"en": "New Callback URL"},
+                "field": {
+                    "text": {
+                        "value": "",
+                        "placeholder": "Paste the new Spotify callback URL here",
+                    }
+                },
+            },
+        ])
 
         return RequestUserInput(
-            {"en": "Spotify Authentication"},
-            [
-                {
-                    "id": "instructions",
-                    "label": {"en": "Authentication Instructions"},
-                    "field": {"label": {"value": {"en": instructions}}},
-                },
-                {
-                    "id": "spotify_url",
-                    "label": {"en": "Spotify Authorization URL"},
-                    "field": {"text": {"value": auth_url, "read_only": True}},
-                },
-                {
-                    "id": "auth_code",
-                    "label": {"en": "Paste Code or Full URL"},
-                    "field": {"text": {"value": "", "placeholder": "Paste here..."}},
-                },
-            ],
+            {"en": "Spotify Authentication Failed" if error else "Spotify Authentication"},
+            settings,
         )
 
 
