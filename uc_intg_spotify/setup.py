@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
+import urllib.parse
 from typing import Any
 
 from ucapi import RequestUserInput
@@ -42,7 +43,7 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
                                 "5. Check 'Web API' and save\n"
                                 "6. Copy Client ID and Client Secret below\n\n"
                                 "\n\n"
-                                "Note: You can add multiple Spotify accounts by running setup again.\n\n"
+                                "Note: You can add multiple Spotify accounts by running this setup again.\n\n"
                             }
                         }
                     },
@@ -75,71 +76,38 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
         self._client_id = client_id
         self._client_secret = client_secret
 
-        client = SpotifyClient()
-        auth_url = client.get_authorization_url(client_id)
-
-        return RequestUserInput(
-            {"en": "Spotify Authentication"},
-            [
-                {
-                    "id": "instructions",
-                    "label": {"en": "Authentication Instructions"},
-                    "field": {
-                        "label": {
-                            "value": {
-                                "en": "1. Click the URL below to open in a browser\n"
-                                "2. Log in and authorize the application\n"
-                                "3. You'll see 'page not found' - this is normal!\n"
-                                "4. Copy the 'code=...' value from your browser's address bar\n"
-                                "5. Paste the code or full URL below"
-                            }
-                        }
-                    },
-                },
-                {
-                    "id": "spotify_url",
-                    "label": {"en": "Spotify Authorization URL"},
-                    "field": {"text": {"value": auth_url, "read_only": True}},
-                },
-                {
-                    "id": "auth_code",
-                    "label": {"en": "Paste Code or Full URL"},
-                    "field": {"text": {"value": "", "placeholder": "Paste here..."}},
-                },
-            ],
-        )
+        return self._auth_form()
 
     async def _handle_auth_code(
         self, input_values: dict[str, Any]
-    ) -> SpotifyDeviceConfig:
+    ) -> SpotifyDeviceConfig | RequestUserInput:
         auth_input = input_values.get("auth_code", "").strip()
         if not auth_input:
-            raise ValueError("Authorization code is required")
+            return self._auth_form("Paste the Spotify callback URL or authorization code.")
 
-        auth_code = auth_input
-        if "code=" in auth_input:
-            try:
-                code_part = auth_input.split("code=")[1]
-                auth_code = code_part.split("&")[0]
-            except (IndexError, ValueError):
-                raise ValueError("Could not extract code from URL")
+        auth_code, error = _extract_auth_code(auth_input)
+        if error:
+            return self._auth_form(error)
 
         client = SpotifyClient()
-        token_data = await client.exchange_code_for_token(
-            auth_code, self._client_id, self._client_secret
-        )
+        try:
+            token_data = await client.exchange_code_for_token(
+                auth_code, self._client_id, self._client_secret
+            )
 
-        if not token_data:
+            if not token_data:
+                return self._auth_form(
+                    "Spotify rejected that callback/code."
+                )
+
+            access_token = token_data["access_token"]
+            refresh_token = token_data["refresh_token"]
+            expires_in = token_data.get("expires_in", 3600)
+
+            client.set_tokens(access_token, refresh_token)
+            user = await client.get_current_user()
+        finally:
             await client.close()
-            raise ConnectionError("Failed to authenticate with Spotify")
-
-        access_token = token_data["access_token"]
-        refresh_token = token_data["refresh_token"]
-        expires_in = token_data.get("expires_in", 3600)
-
-        client.set_tokens(access_token, refresh_token)
-        user = await client.get_current_user()
-        await client.close()
 
         account_id = _account_id(user)
         account_name = _account_name(user, account_id)
@@ -154,6 +122,62 @@ class SpotifySetupFlow(BaseSetupFlow[SpotifyDeviceConfig]):
             access_token=access_token,
             refresh_token=refresh_token,
             token_expires_at=int(time.time()) + expires_in - 60,
+        )
+
+    def _auth_form(self, error: str = "") -> RequestUserInput:
+        client = SpotifyClient()
+        auth_url = client.get_authorization_url(self._client_id)
+        instructions = (
+            "1. Click the URL below to open in a browser\n"
+            "2. Log in and authorize the application\n"
+            "3. You'll see 'page not found' - this is normal!\n"
+            "4. Copy the URL from your browser's address bar\n"
+            "5. Paste the URL below"
+        )
+        settings: list[dict[str, Any]] = []
+        if error:
+            settings.append({
+                "id": "error",
+                "label": {"en": "Could not authenticate"},
+                "field": {
+                    "label": {
+                        "value": {
+                            "en": (
+                                f"{error}\n\n"
+                                "Your Spotify Client ID and Client Secret were kept. "
+                                "Open the authorization URL again and paste the new callback URL below."
+                            )
+                        }
+                    }
+                },
+            })
+
+        settings.extend([
+            {
+                "id": "instructions",
+                "label": {"en": "Authentication Instructions"},
+                "field": {"label": {"value": {"en": instructions}}},
+            },
+            {
+                "id": "spotify_url",
+                "label": {"en": "Spotify Authorization URL"},
+                "field": {"text": {"value": auth_url, "read_only": True}},
+            },
+            {
+                "id": "auth_code",
+                "label": {"en": "New Callback URL"},
+                "field": {
+                    "text": {
+                        "value": "",
+                        "placeholder": "Paste the new Spotify callback URL here",
+                    }
+                },
+            },
+        ])
+
+        return RequestUserInput(
+            {"en": "Spotify Authentication Failed" if error else "Spotify Authentication"},
+            settings,
         )
 
 
@@ -172,3 +196,24 @@ def _account_name(user: dict[str, Any] | None, fallback: str) -> str:
 def _safe_identifier(value: str) -> str:
     safe = _IDENTIFIER_RE.sub("_", value.lower()).strip("_")
     return safe or "account"
+
+
+def _extract_auth_code(auth_input: str) -> tuple[str, str]:
+    if "://" not in auth_input and "code=" not in auth_input:
+        return auth_input, ""
+
+    if "://" in auth_input:
+        parsed = urllib.parse.urlparse(auth_input)
+        params = urllib.parse.parse_qs(parsed.query or parsed.fragment)
+    else:
+        params = urllib.parse.parse_qs(auth_input.lstrip("?"))
+
+    spotify_error = params.get("error", [""])[0]
+    if spotify_error:
+        return "", f"Spotify returned an authorization error: {spotify_error}."
+
+    code = params.get("code", [""])[0].strip()
+    if not code:
+        return "", "That callback URL does not contain a Spotify authorization code."
+
+    return code, ""
